@@ -5,13 +5,15 @@ use std::{fs::File, io};
 use crate::constants::{ADD, ADJ_BASE, EQ, IN, JMP_FALSE, JMP_TRUE, LESS, MULT, OUT, RET};
 use crate::param::ParamMode;
 
-const MIN_MEM_SIZE: usize = 4096;
+const MIN_MEM_SIZE: usize = 30000;
 
 #[derive(Default, Debug)]
 pub struct VM {
     memory: Vec<i64>,
     pc: usize,
     rel_base: i64,
+    buffer: String,
+    // buffer_read: usize,
 }
 
 impl VM {
@@ -98,14 +100,19 @@ impl VM {
                 IN => {
                     let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 2]);
 
+                    // if self.buffer_read >= self.buffer.len() {
                     print!("> ");
                     io::stdout().flush().unwrap();
 
-                    let mut buffer = String::new();
-                    io::stdin().read_line(&mut buffer).unwrap();
+                    let mut temp_buffer = String::new();
+                    io::stdin().read_line(&mut temp_buffer).unwrap();
+                    self.buffer = temp_buffer.clone();
+                    // self.buffer_read = 0;
+                    // }
 
-                    let buffer = buffer.trim();
-                    let value: i64 = buffer.parse().unwrap();
+                    let value: i64 = self.buffer.parse().unwrap();
+
+                    // self.buffer_read += 1;
 
                     if let ParamMode::Position(pos) = params[0] {
                         self.memory[pos as usize] = value;
@@ -120,7 +127,8 @@ impl VM {
                     let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 2]);
                     let a = self.get_param_value(&params[0]);
 
-                    println!("{}", a);
+                    print!("{}", char::from_u32(a as u32).unwrap());
+                    // println!("{}", a);
 
                     self.pc += 2;
                 }

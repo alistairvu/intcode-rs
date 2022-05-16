@@ -1,1 +1,4 @@
 /target
+/input
+**/*.bin
+input/day-09/large.bin
