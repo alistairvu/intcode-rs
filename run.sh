@@ -1,3 +1,3 @@
 #!/bin/sh
 
-cargo run -q $(python compiler.py "input/$1")
+cargo run -q $(cargo run -q --bin compile input/$1)
