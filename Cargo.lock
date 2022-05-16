@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "interpreter"
+name = "intcode-rs"
 version = "0.1.0"

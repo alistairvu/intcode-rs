@@ -16,5 +16,4 @@ fn main() {
     let mut vm = VM::new();
     vm.read(&args[1]);
     vm.run();
-    // println!("{:?}", vm);
 }
