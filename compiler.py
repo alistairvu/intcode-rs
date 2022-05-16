@@ -20,7 +20,7 @@ def main():
         for byte in values:
             try:
                 output_file.write(byte.to_bytes(
-                    4, byteorder="little", signed=True))
+                    8, byteorder="little", signed=True))
             except OverflowError:
                 print(f"Overflow: {byte}")
                 return

@@ -2,13 +2,16 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::{fs::File, io};
 
-use crate::constants::{ADD, EQ, IN, JMP_FALSE, JMP_TRUE, LESS, MULT, OUT, RET};
+use crate::constants::{ADD, ADJ_BASE, EQ, IN, JMP_FALSE, JMP_TRUE, LESS, MULT, OUT, RET};
 use crate::param::ParamMode;
+
+const MIN_MEM_SIZE: usize = 4096;
 
 #[derive(Default, Debug)]
 pub struct VM {
-    memory: Vec<i32>,
+    memory: Vec<i64>,
     pc: usize,
+    rel_base: i64,
 }
 
 impl VM {
@@ -31,14 +34,12 @@ impl VM {
             .read_to_end(&mut buffer)
             .unwrap_or_else(|e| panic!("Couldn't read {}: {}", display, e));
 
-        let memory_vec = buffer.chunks(4).map(|chunk| {
-            let value = (chunk[3] as i32) << 24
-                | (chunk[2] as i32) << 16
-                | (chunk[1] as i32) << 8
-                | chunk[0] as i32;
+        let memory_vec = buffer.chunks(8).map(|chunk| {
+            let chunk: [u8; 8] = chunk.try_into().unwrap();
+            let value = i64::from_le_bytes(chunk);
 
-            if value > 0x40000000 {
-                value - 0x40000000
+            if value >> 63 == 1 {
+                value - (1 << 63)
             } else {
                 value
             }
@@ -47,12 +48,17 @@ impl VM {
         for value in memory_vec {
             self.memory.push(value);
         }
+
+        while self.memory.len() < MIN_MEM_SIZE {
+            self.memory.push(0);
+        }
     }
 
-    fn get_param_value(&self, param: &ParamMode) -> i32 {
+    fn get_param_value(&self, param: &ParamMode) -> i64 {
         match param {
             ParamMode::Position(pos) => self.memory[*pos],
             ParamMode::Immediate(val) => *val,
+            ParamMode::Relative(pos) => self.memory[(*pos + self.rel_base) as usize],
         }
     }
 
@@ -67,6 +73,8 @@ impl VM {
 
                     if let ParamMode::Position(pos) = params[2] {
                         self.memory[pos] = a + b;
+                    } else if let ParamMode::Relative(pos) = params[2] {
+                        self.memory[(pos + self.rel_base) as usize] = a + b;
                     }
 
                     self.pc += 4;
@@ -80,13 +88,15 @@ impl VM {
 
                     if let ParamMode::Position(pos) = params[2] {
                         self.memory[pos] = a * b;
+                    } else if let ParamMode::Relative(pos) = params[2] {
+                        self.memory[(pos + self.rel_base) as usize] = a * b;
                     }
 
                     self.pc += 4;
                 }
 
                 IN => {
-                    let a_pos = self.memory[self.pc + 1];
+                    let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 2]);
 
                     print!("> ");
                     io::stdout().flush().unwrap();
@@ -95,9 +105,13 @@ impl VM {
                     io::stdin().read_line(&mut buffer).unwrap();
 
                     let buffer = buffer.trim();
-                    let value: i32 = buffer.parse().unwrap();
+                    let value: i64 = buffer.parse().unwrap();
 
-                    self.memory[a_pos as usize] = value;
+                    if let ParamMode::Position(pos) = params[0] {
+                        self.memory[pos as usize] = value;
+                    } else if let ParamMode::Relative(pos) = params[0] {
+                        self.memory[(pos + self.rel_base) as usize] = value;
+                    }
 
                     self.pc += 2;
                 }
@@ -141,14 +155,12 @@ impl VM {
                     let a = self.get_param_value(&params[0]);
                     let b = self.get_param_value(&params[1]);
 
+                    let result = if a < b { 1 } else { 0 };
+
                     if let ParamMode::Position(pos) = params[2] {
-                        self.memory[pos] = {
-                            if a < b {
-                                1
-                            } else {
-                                0
-                            }
-                        };
+                        self.memory[pos] = result;
+                    } else if let ParamMode::Relative(pos) = params[2] {
+                        self.memory[(pos + self.rel_base) as usize] = result;
                     }
 
                     self.pc += 4;
@@ -160,17 +172,23 @@ impl VM {
                     let a = self.get_param_value(&params[0]);
                     let b = self.get_param_value(&params[1]);
 
+                    let result = if a == b { 1 } else { 0 };
+
                     if let ParamMode::Position(pos) = params[2] {
-                        self.memory[pos] = {
-                            if a == b {
-                                1
-                            } else {
-                                0
-                            }
-                        };
+                        self.memory[pos] = result;
+                    } else if let ParamMode::Relative(pos) = params[2] {
+                        self.memory[(pos + self.rel_base) as usize] = result;
                     }
 
                     self.pc += 4;
+                }
+
+                ADJ_BASE => {
+                    let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 2]);
+
+                    let a = self.get_param_value(&params[0]);
+                    self.rel_base += a;
+                    self.pc += 2;
                 }
 
                 RET => {
