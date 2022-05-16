@@ -5,15 +5,25 @@ use std::{fs::File, io};
 use crate::constants::{ADD, ADJ_BASE, EQ, IN, JMP_FALSE, JMP_TRUE, LESS, MULT, OUT, RET};
 use crate::param::ParamMode;
 
-const MIN_MEM_SIZE: usize = 30000;
+const MEM_SIZE: usize = 30000;
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct VM {
-    memory: Vec<i64>,
+    memory: [i64; MEM_SIZE],
     pc: usize,
     rel_base: i64,
     // buffer: String,
     // buffer_read: usize,
+}
+
+impl Default for VM {
+    fn default() -> Self {
+        Self {
+            memory: [0; MEM_SIZE],
+            pc: 0,
+            rel_base: 0,
+        }
+    }
 }
 
 impl VM {
@@ -36,19 +46,11 @@ impl VM {
             .read_to_end(&mut buffer)
             .unwrap_or_else(|e| panic!("Couldn't read {}: {}", display, e));
 
-        let memory_vec = buffer.chunks(8).map(|chunk| {
+        buffer.chunks(8).enumerate().for_each(|(index, chunk)| {
             let chunk: [u8; 8] = chunk.try_into().unwrap();
             // let value =
-            i64::from_le_bytes(chunk)
+            self.memory[index] = i64::from_le_bytes(chunk);
         });
-
-        for value in memory_vec {
-            self.memory.push(value);
-        }
-
-        while self.memory.len() < MIN_MEM_SIZE {
-            self.memory.push(0);
-        }
     }
 
     fn get_param_value(&self, param: &ParamMode) -> i64 {
