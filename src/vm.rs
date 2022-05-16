@@ -59,6 +59,11 @@ impl VM {
         }
     }
 
+    #[allow(dead_code)]
+    pub fn get_first_value(&self) -> &i64 {
+        self.memory.first().unwrap()
+    }
+
     pub fn run(&mut self) {
         while self.pc < self.memory.len() {
             match self.memory[self.pc] % 100 {
