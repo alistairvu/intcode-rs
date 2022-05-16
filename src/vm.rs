@@ -12,7 +12,7 @@ pub struct VM {
     memory: Vec<i64>,
     pc: usize,
     rel_base: i64,
-    buffer: String,
+    // buffer: String,
     // buffer_read: usize,
 }
 
@@ -38,13 +38,8 @@ impl VM {
 
         let memory_vec = buffer.chunks(8).map(|chunk| {
             let chunk: [u8; 8] = chunk.try_into().unwrap();
-            let value = i64::from_le_bytes(chunk);
-
-            if value >> 63 == 1 {
-                value - (1 << 63)
-            } else {
-                value
-            }
+            // let value =
+            i64::from_le_bytes(chunk)
         });
 
         for value in memory_vec {
@@ -104,13 +99,14 @@ impl VM {
                     print!("> ");
                     io::stdout().flush().unwrap();
 
-                    let mut temp_buffer = String::new();
-                    io::stdin().read_line(&mut temp_buffer).unwrap();
-                    self.buffer = temp_buffer.clone();
+                    let mut buffer = String::new();
+                    io::stdin().read_line(&mut buffer).unwrap();
+                    // self.buffer = buffer.clone();
                     // self.buffer_read = 0;
                     // }
 
-                    let value: i64 = self.buffer.parse().unwrap();
+                    let buffer = buffer.trim();
+                    let value: i64 = buffer.parse().unwrap();
 
                     // self.buffer_read += 1;
 
@@ -127,8 +123,8 @@ impl VM {
                     let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 2]);
                     let a = self.get_param_value(&params[0]);
 
-                    print!("{}", char::from_u32(a as u32).unwrap());
-                    // println!("{}", a);
+                    // print!("{}", char::from_u32(a as u32).unwrap());
+                    println!("{}", a);
 
                     self.pc += 2;
                 }
