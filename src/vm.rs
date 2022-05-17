@@ -12,8 +12,9 @@ pub struct VM {
     memory: [i64; MEM_SIZE],
     pc: usize,
     rel_base: i64,
-    // buffer: String,
-    // buffer_read: usize,
+    buffer: String,
+    buffer_read: usize,
+    ascii: bool,
 }
 
 impl Default for VM {
@@ -22,13 +23,19 @@ impl Default for VM {
             memory: [0; MEM_SIZE],
             pc: 0,
             rel_base: 0,
+            buffer: String::new(),
+            buffer_read: 0,
+            ascii: false,
         }
     }
 }
 
 impl VM {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(ascii: bool) -> Self {
+        Self {
+            ascii,
+            ..Self::default()
+        }
     }
 
     pub fn read(&mut self, filename: &str) {
@@ -48,7 +55,6 @@ impl VM {
 
         buffer.chunks(8).enumerate().for_each(|(index, chunk)| {
             let chunk: [u8; 8] = chunk.try_into().unwrap();
-            // let value =
             self.memory[index] = i64::from_le_bytes(chunk);
         });
     }
@@ -102,20 +108,29 @@ impl VM {
                 IN => {
                     let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 2]);
 
-                    // if self.buffer_read >= self.buffer.len() {
-                    print!("> ");
-                    io::stdout().flush().unwrap();
+                    let value = if self.ascii {
+                        if self.buffer_read >= self.buffer.len() {
+                            print!("> ");
+                            io::stdout().flush().unwrap();
 
-                    let mut buffer = String::new();
-                    io::stdin().read_line(&mut buffer).unwrap();
-                    // self.buffer = buffer.clone();
-                    // self.buffer_read = 0;
-                    // }
+                            let mut buffer = String::new();
+                            io::stdin().read_line(&mut buffer).unwrap();
+                            self.buffer = buffer.clone();
+                            self.buffer_read = 0;
+                        }
 
-                    let buffer = buffer.trim();
-                    let value: i64 = buffer.parse().unwrap();
-
-                    // self.buffer_read += 1;
+                        let value = self.buffer.chars().nth(self.buffer_read).unwrap() as i64;
+                        self.buffer_read += 1;
+                        value
+                    } else {
+                        print!("> ");
+                        io::stdout().flush().unwrap();
+                        let mut buffer = String::new();
+                        io::stdin().read_line(&mut buffer).unwrap();
+                        let buffer = self.buffer.trim();
+                        let value: i64 = buffer.parse().unwrap();
+                        value
+                    };
 
                     if let ParamMode::Position(pos) = params[0] {
                         self.memory[pos as usize] = value;
@@ -130,8 +145,11 @@ impl VM {
                     let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 2]);
                     let a = self.get_param_value(&params[0]);
 
-                    // print!("{}", char::from_u32(a as u32).unwrap());
-                    println!("{}", a);
+                    if self.ascii {
+                        print!("{}", char::from_u32(a as u32).unwrap());
+                    } else {
+                        println!("{}", a);
+                    }
 
                     self.pc += 2;
                 }

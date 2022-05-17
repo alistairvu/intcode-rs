@@ -1,19 +1,21 @@
+use clap::Parser;
 use std::{
-    env::args,
     fs::File,
     io::{Read, Write},
     path::Path,
 };
 
+#[derive(Parser, Debug)]
+#[clap(about)]
+struct Args {
+    /// Intcode file to compile
+    filename: String,
+}
+
 fn main() {
-    let args = args().collect::<Vec<_>>();
+    let args = Args::parse();
 
-    if args.len() != 2 {
-        println!("Usage: cargo run [filename]");
-        return;
-    }
-
-    let filename = &args[1];
+    let filename = args.filename;
 
     let raw_filename = filename.split('.').next().unwrap();
     let output_filename = format!("{}.bin", raw_filename);

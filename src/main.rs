@@ -1,19 +1,25 @@
 use crate::vm::VM;
-use std::env::args;
+use clap::Parser;
 
 mod constants;
 mod param;
 mod vm;
 
+#[derive(Parser, Debug)]
+#[clap(about)]
+struct Args {
+    /// Intcode binary to interpret
+    filename: String,
+
+    /// Turn ascii mode on or off
+    #[clap(short, long)]
+    ascii: bool,
+}
+
 fn main() {
-    let args = args().collect::<Vec<_>>();
+    let args = Args::parse();
 
-    if args.len() != 2 {
-        println!("Usage: cargo run [filename]");
-        return;
-    }
-
-    let mut vm = VM::new();
-    vm.read(&args[1]);
+    let mut vm = VM::new(args.ascii);
+    vm.read(&args.filename);
     vm.run();
 }
