@@ -24,6 +24,10 @@ impl Param {
             }
         }
 
+        if result.len() != param.len() {
+            panic!("Invalid param mode found: {}", param[0]);
+        }
+
         result
     }
 }
