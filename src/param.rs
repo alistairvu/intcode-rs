@@ -1,12 +1,12 @@
 #[derive(Debug)]
-pub enum ParamMode {
+pub enum Param {
     Immediate(i64),
     Position(usize),
     Relative(i64),
 }
 
-impl ParamMode {
-    pub fn get_params(param: &[i64]) -> Vec<ParamMode> {
+impl Param {
+    pub fn get_params(param: &[i64]) -> Vec<Param> {
         let mut result = vec![];
 
         let mut instruction = param[0] / 100;

@@ -3,7 +3,7 @@ use std::path::Path;
 use std::{fs::File, io};
 
 use crate::constants::{ADD, ADJ_BASE, EQ, IN, JMP_FALSE, JMP_TRUE, LESS, MULT, OUT, RET};
-use crate::param::ParamMode;
+use crate::param::Param;
 
 const MEM_SIZE: usize = 30000;
 
@@ -59,11 +59,11 @@ impl VM {
         });
     }
 
-    fn get_param_value(&self, param: &ParamMode) -> i64 {
+    fn get_param_value(&self, param: &Param) -> i64 {
         match param {
-            ParamMode::Position(pos) => self.memory[*pos],
-            ParamMode::Immediate(val) => *val,
-            ParamMode::Relative(pos) => self.memory[(*pos + self.rel_base) as usize],
+            Param::Position(pos) => self.memory[*pos],
+            Param::Immediate(val) => *val,
+            Param::Relative(pos) => self.memory[(*pos + self.rel_base) as usize],
         }
     }
 
@@ -76,14 +76,14 @@ impl VM {
         while self.pc < self.memory.len() {
             match self.memory[self.pc] % 100 {
                 ADD => {
-                    let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 4]);
+                    let params = Param::get_params(&self.memory[self.pc..self.pc + 4]);
 
                     let a = self.get_param_value(&params[0]);
                     let b = self.get_param_value(&params[1]);
 
-                    if let ParamMode::Position(pos) = params[2] {
+                    if let Param::Position(pos) = params[2] {
                         self.memory[pos] = a + b;
-                    } else if let ParamMode::Relative(pos) = params[2] {
+                    } else if let Param::Relative(pos) = params[2] {
                         self.memory[(pos + self.rel_base) as usize] = a + b;
                     }
 
@@ -91,14 +91,14 @@ impl VM {
                 }
 
                 MULT => {
-                    let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 4]);
+                    let params = Param::get_params(&self.memory[self.pc..self.pc + 4]);
 
                     let a = self.get_param_value(&params[0]);
                     let b = self.get_param_value(&params[1]);
 
-                    if let ParamMode::Position(pos) = params[2] {
+                    if let Param::Position(pos) = params[2] {
                         self.memory[pos] = a * b;
-                    } else if let ParamMode::Relative(pos) = params[2] {
+                    } else if let Param::Relative(pos) = params[2] {
                         self.memory[(pos + self.rel_base) as usize] = a * b;
                     }
 
@@ -106,7 +106,7 @@ impl VM {
                 }
 
                 IN => {
-                    let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 2]);
+                    let params = Param::get_params(&self.memory[self.pc..self.pc + 2]);
 
                     let value = if self.ascii {
                         if self.buffer_read >= self.buffer.len() {
@@ -132,9 +132,9 @@ impl VM {
                         value
                     };
 
-                    if let ParamMode::Position(pos) = params[0] {
+                    if let Param::Position(pos) = params[0] {
                         self.memory[pos as usize] = value;
-                    } else if let ParamMode::Relative(pos) = params[0] {
+                    } else if let Param::Relative(pos) = params[0] {
                         self.memory[(pos + self.rel_base) as usize] = value;
                     }
 
@@ -142,7 +142,7 @@ impl VM {
                 }
 
                 OUT => {
-                    let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 2]);
+                    let params = Param::get_params(&self.memory[self.pc..self.pc + 2]);
                     let a = self.get_param_value(&params[0]);
 
                     if self.ascii {
@@ -155,7 +155,7 @@ impl VM {
                 }
 
                 JMP_TRUE => {
-                    let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 3]);
+                    let params = Param::get_params(&self.memory[self.pc..self.pc + 3]);
                     let a = self.get_param_value(&params[0]);
                     let b = self.get_param_value(&params[1]);
 
@@ -167,7 +167,7 @@ impl VM {
                 }
 
                 JMP_FALSE => {
-                    let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 3]);
+                    let params = Param::get_params(&self.memory[self.pc..self.pc + 3]);
                     let a = self.get_param_value(&params[0]);
                     let b = self.get_param_value(&params[1]);
 
@@ -179,16 +179,16 @@ impl VM {
                 }
 
                 LESS => {
-                    let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 4]);
+                    let params = Param::get_params(&self.memory[self.pc..self.pc + 4]);
 
                     let a = self.get_param_value(&params[0]);
                     let b = self.get_param_value(&params[1]);
 
                     let result = if a < b { 1 } else { 0 };
 
-                    if let ParamMode::Position(pos) = params[2] {
+                    if let Param::Position(pos) = params[2] {
                         self.memory[pos] = result;
-                    } else if let ParamMode::Relative(pos) = params[2] {
+                    } else if let Param::Relative(pos) = params[2] {
                         self.memory[(pos + self.rel_base) as usize] = result;
                     }
 
@@ -196,16 +196,16 @@ impl VM {
                 }
 
                 EQ => {
-                    let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 4]);
+                    let params = Param::get_params(&self.memory[self.pc..self.pc + 4]);
 
                     let a = self.get_param_value(&params[0]);
                     let b = self.get_param_value(&params[1]);
 
                     let result = if a == b { 1 } else { 0 };
 
-                    if let ParamMode::Position(pos) = params[2] {
+                    if let Param::Position(pos) = params[2] {
                         self.memory[pos] = result;
-                    } else if let ParamMode::Relative(pos) = params[2] {
+                    } else if let Param::Relative(pos) = params[2] {
                         self.memory[(pos + self.rel_base) as usize] = result;
                     }
 
@@ -213,7 +213,7 @@ impl VM {
                 }
 
                 ADJ_BASE => {
-                    let params = ParamMode::get_params(&self.memory[self.pc..self.pc + 2]);
+                    let params = Param::get_params(&self.memory[self.pc..self.pc + 2]);
 
                     let a = self.get_param_value(&params[0]);
                     self.rel_base += a;
